@@ -6,7 +6,7 @@ import os
 import datetime
 from dotenv import load_dotenv
 import logging
-from helper import setup_logger
+from modules.helper import setup_logger
 import time
 import zipfile
 import gzip
@@ -15,18 +15,17 @@ import tempfile
 
 setup_logger()
 
-def export_api():
+api_key = os.getenv("AMP_API_KEY")
+secret_key = os.getenv("AMP_SECRET_KEY")
+
+end_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y%m%dT23')
+start_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y%m%dT00')
+
+def export_api(start_time, end_time, api_key, secret_key, output_file='data.zip'):
     # Load .env and assign variables
     load_dotenv()
 
-    amp_api = os.getenv("AMP_API_KEY")
-    amp_secret = os.getenv("AMP_SECRET_KEY")
-    amp_region= os.getenv("AMP_DATA_REGION")
-
     amp_endpoint = "https://analytics.eu.amplitude.com/api/2/export"
-
-    end_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y%m%dT23')
-    start_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y%m%dT00')
 
     params = {
         'start': start_time, # Format YYYYMMDDTTT
@@ -36,11 +35,11 @@ def export_api():
     # Set save filepath
     output_dir = os.path.join(os.getcwd(),'local\/raw_zip')
     os.makedirs(output_dir, exist_ok=True)
-    filepath = os.path.join(output_dir, end_time +'_data.zip')
+    filepath = os.path.join(output_dir, end_time + '_' +output_file)
 
     for i in range(3):
         try:
-            response = requests.get(amp_endpoint,params=params,auth=(amp_api,amp_secret))
+            response = requests.get(amp_endpoint,params=params,auth=(api_key,secret_key))
             response.raise_for_status()
             
             data = response.content
@@ -97,10 +96,10 @@ def extract_json_from_zip():
     logging.info(f"Deleted ZIP file: {zip_path}_data.zip")
 
 
-if export_api():
-    extract_json_from_zip()
-else:
-    logging.warning('Skipping JSON extraction because export_api() failed.')
+# if export_api():
+#     extract_json_from_zip()
+# else:
+#     logging.warning('Skipping JSON extraction because export_api() failed.')
 
 
 

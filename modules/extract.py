@@ -6,7 +6,7 @@ import os
 import datetime
 from dotenv import load_dotenv
 import logging
-from helper import setup_logger
+from modules.helper import setup_logger
 import time
 import zipfile
 import gzip
@@ -55,7 +55,7 @@ def export_api():
             logging.info(f"Data saved to {filepath}")
             return True
         except requests.exceptions.RequestException as e:
-            logging.error(f"Attempt {i+1} : Failed to get data - {e}")
+            logging.error(f"Attempt {i} : Failed to get data - {e}")
             time.sleep(2**i)
     return False
 
