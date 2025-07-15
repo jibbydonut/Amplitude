@@ -12,6 +12,7 @@ import zipfile
 import gzip
 import shutil
 import tempfile
+import boto3
 
 setup_logger()
 
@@ -58,7 +59,7 @@ def export_api(start_time, end_time, api_key, secret_key, output_file='data.zip'
             time.sleep(2**i)
     return False
 
-def extract_json_from_zip():
+def extract_json_from_zip(start_time,end_time,output_file='data.zip'):
     # Extract JSON from ZIP
 
     # Create temp directory for extraction
@@ -68,7 +69,7 @@ def extract_json_from_zip():
     json_dir = os.path.join(os.getcwd(),'local/json')
     os.makedirs(json_dir, exist_ok=True)
 
-    zip_path = 'local/raw_zip/'+(datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)).strftime('%Y%m%dT23')+'_data.zip'
+    zip_path = 'local/raw_zip/'+end_time+'_'+output_file
 
     with zipfile.ZipFile(zip_path,"r") as zip_ref:
         zip_ref.extractall(temp_dir)
@@ -88,6 +89,7 @@ def extract_json_from_zip():
                 with gzip.open(gz_path,'rb') as gz_file, open(output_path,'wb') as out_file:
                     shutil.copyfileobj(gz_file,out_file)
                 json_count +=1
+            
     
     logging.info(f"{json_count} JSON files extracted from {zip_path} to {json_dir}")
 
@@ -95,11 +97,34 @@ def extract_json_from_zip():
     os.remove(zip_path)
     logging.info(f"Deleted ZIP file: {zip_path}_data.zip")
 
+def upload_json_to_s3(file_path, bucket, sub_dir,aws_access, aws_secret_access):
+    s3_client = boto3.client(
+        service_name='s3',
+        aws_access_key_id=aws_access,
+        aws_secret_access_key=aws_secret_access
+    )
 
-# if export_api():
-#     extract_json_from_zip()
-# else:
-#     logging.warning('Skipping JSON extraction because export_api() failed.')
+    uploaded_cnt = 0
+
+    for root, _, files in os.walk(file_path):
+        for file in files:
+            if file.endswith('.json'):
+                file_path = os.path.join(root, file)
+                object_name = f"{sub_dir}/{file}"
+
+
+                try:
+                    s3_client.upload_file(file_path, bucket, object_name)
+                    logging.info(f"File uploaded to S3: s3://{bucket}/{sub_dir}/{object_name}")
+                    os.remove(file_path)
+                    logging.info(f"Deleted file from temp folder")
+                    uploaded_cnt += 1
+                except boto3.exceptions.S3UploadFailedError as e:
+                    logging.error(f"S3 upload failed: {e}")
+                except Exception as e:
+                    logging.error(f"Unexpected error during S3 upload: {e}")
+    
+    logging.info(f"Total Json Uploaded: {uploaded_cnt}")
 
 
 
