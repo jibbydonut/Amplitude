@@ -1,8 +1,9 @@
 import logging
+import sys
 
 def setup_logger(log_file='export_api.log'):
     file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
 
     file_handler.setLevel(logging.INFO)
     console_handler.setLevel(logging.INFO)
